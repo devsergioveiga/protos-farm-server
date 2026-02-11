@@ -1,0 +1,42 @@
+# Copie .env.example para .env e ajuste as variáveis. O Compose lê .env automaticamente.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-protos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-protos_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-protos_farm}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432" # porta no host (5433 para não conflitar com Postgres local)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-protos} -d ${POSTGRES_DB:-protos_farm}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-protos}:${POSTGRES_PASSWORD:-protos_secret}@postgres:5432/${POSTGRES_DB:-protos_farm}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-protos}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-protos_secret}
+      PGDATABASE: ${POSTGRES_DB:-protos_farm}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
