@@ -212,7 +212,20 @@ docker build --platform linux/amd64 -t 607374883165.dkr.ecr.sa-east-1.amazonaws.
 
 ---
 
-## 9. Resumo rápido
+## 9. Rotação de senha do RDS (segurança)
+
+Se a senha do banco foi exposta (ex.: em chat, logs, commit), rotacione-a:
+
+1. **RDS** → sua instância → **Modify** → **Master password** → definir nova senha → **Apply immediately**.
+2. **Secrets Manager** → secret `protos-farm-database-url` → **Retrieve secret value** → **Edit** → atualizar a connection string com a nova senha (`postgresql://usuario:NOVA_SENHA@host:5432/postgres?sslmode=require`).
+3. Forçar novo deploy do ECS para as tasks carregarem o secret atualizado:
+   ```bash
+   aws ecs update-service --cluster protos-farm-cluster --service protos-farm-server-service-jv7j5zu0 --force-new-deployment --region sa-east-1
+   ```
+
+---
+
+## 10. Resumo rápido
 
 1. Criar repositório ECR e anotar o nome.
 2. Criar RDS PostgreSQL e anotar a connection string.
