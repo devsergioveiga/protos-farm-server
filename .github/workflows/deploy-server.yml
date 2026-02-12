@@ -1,7 +1,12 @@
 name: Deploy Server to AWS (ECS)
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch: # Permite execução manual
+  workflow_call: # Permite chamada por outros workflows
 
 env:
   AWS_REGION: sa-east-1
@@ -31,7 +36,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECS_ECR_REPOSITORY_NAME }}
         run: |
-          docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./server
+          docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}" >> $GITHUB_OUTPUT

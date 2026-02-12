@@ -1,9 +1,11 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { personRoutes } from "./presentation/http/routes/person.routes.js";
 import { userRoutes } from "./presentation/http/routes/user.routes.js";
+import { organizationRoutes } from "./presentation/http/routes/organization.routes.js";
 import {
   db,
   checkDatabase,
@@ -26,6 +28,12 @@ async function runMigrations(): Promise<void> {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/", (_req: Request, res: Response) => {
@@ -43,6 +51,7 @@ app.get("/health", async (_req: Request, res: Response) => {
 
 app.use("/api/persons", personRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/organizations", organizationRoutes);
 
 runMigrations()
   .then(() => {

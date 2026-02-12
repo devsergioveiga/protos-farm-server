@@ -28,6 +28,7 @@ services:
       - "3001:3001"
     environment:
       PORT: "3001"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       DATABASE_URL: postgresql://${POSTGRES_USER:-protos}:${POSTGRES_PASSWORD:-protos_secret}@postgres:5432/${POSTGRES_DB:-protos_farm}
       PGHOST: postgres
       PGPORT: "5432"
