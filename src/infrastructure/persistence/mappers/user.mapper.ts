@@ -5,6 +5,7 @@ export interface UserRow {
   email: string;
   passwordHash: string;
   personId: string;
+  userTypeId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ export function toDomain(row: UserRow): User {
     row.email,
     row.passwordHash,
     row.personId,
+    row.userTypeId,
     row.createdAt,
     row.updatedAt,
   );
@@ -26,6 +28,7 @@ export function toPersistence(user: User) {
     email: user.email,
     passwordHash: user.passwordHash,
     personId: user.personId,
+    userTypeId: user.userTypeId,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

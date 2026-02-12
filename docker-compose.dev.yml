@@ -1,0 +1,23 @@
+# Ambiente de desenvolvimento com hot reload
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules  # mantém node_modules do container (evita conflito com host)
+    environment:
+      PORT: "3001"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-protos}:${POSTGRES_PASSWORD:-protos_secret}@postgres:5432/${POSTGRES_DB:-protos_farm}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-protos}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-protos_secret}
+      PGDATABASE: ${POSTGRES_DB:-protos_farm}
+    command: npm run dev

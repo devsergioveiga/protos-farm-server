@@ -16,6 +16,15 @@ export const roleEnum = pgEnum("role", [
   "EMPLOYEE",
 ]);
 
+export const userTypes = pgTable("user_types", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -52,6 +61,9 @@ export const users = pgTable("users", {
   personId: uuid("person_id")
     .notNull()
     .references(() => persons.id, { onDelete: "cascade" }),
+  userTypeId: uuid("user_type_id")
+    .notNull()
+    .references(() => userTypes.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

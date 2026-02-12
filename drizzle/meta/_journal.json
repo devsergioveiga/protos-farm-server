@@ -22,6 +22,13 @@
       "when": 1770892386445,
       "tag": "0002_colossal_edwin_jarvis",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770896336264,
+      "tag": "0003_premium_wendell_rand",
+      "breakpoints": true
     }
   ]
 }

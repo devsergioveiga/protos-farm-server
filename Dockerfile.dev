@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install all dependencies (including devDependencies for tsx/watch)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Entrypoint que instala deps antes de rodar (volume sobrescreve node_modules)
+COPY docker-entrypoint.dev.sh /docker-entrypoint.dev.sh
+RUN chmod +x /docker-entrypoint.dev.sh
+
+# Don't copy source - will be mounted via volume in dev
+# Don't build - tsx runs TypeScript directly
+# Don't prune - devDependencies needed for tsx
+
+EXPOSE 3001
+
+# RDS usa certificado AWS; Node precisa aceitar para conexão SSL
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+
+ENTRYPOINT ["/docker-entrypoint.dev.sh"]
+CMD ["npm", "run", "dev"]
