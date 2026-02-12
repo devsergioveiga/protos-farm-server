@@ -5,6 +5,7 @@ import {
   timestamp,
   primaryKey,
   pgEnum,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const personTypeEnum = pgEnum("person_type", ["PF", "PJ"]);
@@ -14,6 +15,15 @@ export const roleEnum = pgEnum("role", [
   "SUPPLIER",
   "EMPLOYEE",
 ]);
+
+export const organizations = pgTable("organizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export const persons = pgTable("persons", {
   id: uuid("id").primaryKey().defaultRandom(),
