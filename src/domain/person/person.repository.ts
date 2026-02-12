@@ -6,18 +6,25 @@ export interface CreatePersonInput {
   documentNumber: string;
   organizationId: string;
   roles: ("USER" | "CLIENT" | "SUPPLIER" | "EMPLOYEE")[];
+  clientCategoryId?: string | null;
+  supplierCategoryId?: string | null;
+  tradeName?: string | null;
 }
 
 export interface UpdatePersonInput {
   name: string;
   documentNumber: string;
   roles: ("USER" | "CLIENT" | "SUPPLIER" | "EMPLOYEE")[];
+  clientCategoryId?: string | null;
+  supplierCategoryId?: string | null;
+  tradeName?: string | null;
 }
 
 export interface ListPersonsInput {
   page?: number;
   limit?: number;
   organizationId?: string | null;
+  roles?: string[];
 }
 
 export interface ListPersonsResult {

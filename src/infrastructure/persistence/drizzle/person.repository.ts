@@ -16,9 +16,12 @@ export class DrizzlePersonRepository implements IPersonRepository {
     await db.insert(persons).values({
       id: data.id,
       name: data.name,
+      tradeName: data.tradeName,
       personType: data.personType,
       documentNumber: data.documentNumber,
       organizationId: data.organizationId,
+      clientCategoryId: data.clientCategoryId,
+      supplierCategoryId: data.supplierCategoryId,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
@@ -49,11 +52,14 @@ export class DrizzlePersonRepository implements IPersonRepository {
       {
         id: row.id,
         name: row.name,
+        tradeName: row.tradeName ?? null,
         personType: row.personType as "PF" | "PJ",
         documentNumber: row.documentNumber,
         organizationId: row.organizationId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        clientCategoryId: row.clientCategoryId ?? null,
+        supplierCategoryId: row.supplierCategoryId ?? null,
       },
       roles,
     );
@@ -76,11 +82,14 @@ export class DrizzlePersonRepository implements IPersonRepository {
       {
         id: row.id,
         name: row.name,
+        tradeName: row.tradeName ?? null,
         personType: row.personType as "PF" | "PJ",
         documentNumber: row.documentNumber,
         organizationId: row.organizationId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        clientCategoryId: row.clientCategoryId ?? null,
+        supplierCategoryId: row.supplierCategoryId ?? null,
       },
       roles,
     );
@@ -96,16 +105,26 @@ export class DrizzlePersonRepository implements IPersonRepository {
         ? eq(persons.organizationId, input.organizationId)
         : sql`true`;
 
+    const rolesFilter =
+      input.roles?.length && input.roles.length > 0
+        ? sql`${persons.id} IN (SELECT person_id FROM person_roles WHERE role IN (${sql.join(
+            input.roles.map((r) => sql`${r}`),
+            sql`, `,
+          )}))`
+        : sql`true`;
+
+    const whereClause = sql`${orgFilter} AND ${rolesFilter}`;
+
     const [{ count: countResult }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(persons)
-      .where(orgFilter);
+      .where(whereClause);
     const total = Number(countResult ?? 0);
 
     const rows = await db
       .select()
       .from(persons)
-      .where(orgFilter)
+      .where(whereClause)
       .orderBy(desc(persons.createdAt))
       .limit(limit)
       .offset(offset);
@@ -122,11 +141,14 @@ export class DrizzlePersonRepository implements IPersonRepository {
           {
             id: row.id,
             name: row.name,
+            tradeName: row.tradeName ?? null,
             personType: row.personType as "PF" | "PJ",
             documentNumber: row.documentNumber,
             organizationId: row.organizationId,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
+            clientCategoryId: row.clientCategoryId ?? null,
+            supplierCategoryId: row.supplierCategoryId ?? null,
           },
           roles,
         ),
@@ -147,7 +169,10 @@ export class DrizzlePersonRepository implements IPersonRepository {
       .update(persons)
       .set({
         name: data.name,
+        tradeName: data.tradeName,
         documentNumber: data.documentNumber,
+        clientCategoryId: data.clientCategoryId,
+        supplierCategoryId: data.supplierCategoryId,
         updatedAt: data.updatedAt,
       })
       .where(eq(persons.id, person.id));

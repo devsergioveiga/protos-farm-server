@@ -1,6 +1,8 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
 import { DrizzlePersonRepository } from "../../../infrastructure/persistence/drizzle/person.repository.js";
+import { DrizzleClientCategoryRepository } from "../../../infrastructure/persistence/drizzle/client-category.repository.js";
+import { DrizzleSupplierCategoryRepository } from "../../../infrastructure/persistence/drizzle/supplier-category.repository.js";
 import { CreatePersonUseCase } from "../../../application/person/create-person.use-case.js";
 import { GetPersonUseCase } from "../../../application/person/get-person.use-case.js";
 import { ListPersonsUseCase } from "../../../application/person/list-persons.use-case.js";
@@ -12,6 +14,7 @@ import type { OrgContextRequest } from "../middleware/org-context.middleware.js"
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
+  tradeName: z.string().max(255).nullish(),
   personType: z.enum(["PF", "PJ"]),
   documentNumber: z.string().min(1).max(14),
   organizationId: z.uuid().optional(),
@@ -28,10 +31,13 @@ const createSchema = z.object({
     )
     .optional()
     .default([]),
+  clientCategoryId: z.uuid().nullish(),
+  supplierCategoryId: z.uuid().nullish(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(1).max(255),
+  tradeName: z.string().max(255).nullish(),
   documentNumber: z.string().min(1).max(14),
   roles: z
     .array(
@@ -46,32 +52,50 @@ const updateSchema = z.object({
     )
     .optional()
     .default([]),
+  clientCategoryId: z.uuid().nullish(),
+  supplierCategoryId: z.uuid().nullish(),
 });
 
 const repository = new DrizzlePersonRepository();
-const createPerson = new CreatePersonUseCase(repository);
+const clientCategoryRepository = new DrizzleClientCategoryRepository();
+const supplierCategoryRepository = new DrizzleSupplierCategoryRepository();
+const createPerson = new CreatePersonUseCase(
+  repository,
+  clientCategoryRepository,
+  supplierCategoryRepository,
+);
 const getPerson = new GetPersonUseCase(repository);
 const listPersons = new ListPersonsUseCase(repository);
-const updatePerson = new UpdatePersonUseCase(repository);
+const updatePerson = new UpdatePersonUseCase(
+  repository,
+  clientCategoryRepository,
+  supplierCategoryRepository,
+);
 const deletePerson = new DeletePersonUseCase(repository);
 
 function personToJson(person: {
   id: string;
   name: string;
+  tradeName: string | null;
   personType: string;
   documentNumber: string;
   organizationId: string;
   roles: string[];
   createdAt: Date;
   updatedAt: Date;
+  clientCategoryId: string | null;
+  supplierCategoryId: string | null;
 }) {
   return {
     id: person.id,
     name: person.name,
+    tradeName: person.tradeName,
     personType: person.personType,
     documentNumber: person.documentNumber,
     organizationId: person.organizationId,
     roles: person.roles,
+    clientCategoryId: person.clientCategoryId,
+    supplierCategoryId: person.supplierCategoryId,
     createdAt: person.createdAt.toISOString(),
     updatedAt: person.updatedAt.toISOString(),
   };
@@ -117,7 +141,8 @@ personRoutes.post(
       if (
         message.includes("documento") ||
         message.includes("Tipo") ||
-        message.includes("organização")
+        message.includes("organização") ||
+        message.includes("Categoria")
       ) {
         return res.status(400).json({ error: message });
       }
@@ -140,10 +165,23 @@ personRoutes.get(
           ? req.query.organizationId
           : undefined;
       const orgIdForFilter = req.organizationId ?? queryOrgId;
+
+      let roles: string[] | undefined;
+      const roleParam = req.query.role;
+      const rolesParam = req.query.roles;
+      if (typeof roleParam === "string" && roleParam) {
+        roles = [roleParam];
+      } else if (Array.isArray(rolesParam) && rolesParam.length > 0) {
+        roles = rolesParam.filter((r): r is string => typeof r === "string");
+      } else if (typeof rolesParam === "string" && rolesParam) {
+        roles = rolesParam.split(",").map((r) => r.trim()).filter(Boolean);
+      }
+
       const result = await listPersons.execute({
         page,
         limit,
         organizationId: orgIdForFilter,
+        roles,
       });
       return res.json({
         items: result.items.map(personToJson),
@@ -201,7 +239,11 @@ personRoutes.put(
       ) {
         return res.status(404).json({ error: message });
       }
-      if (message.includes("documento") || message.includes("inválido")) {
+      if (
+        message.includes("documento") ||
+        message.includes("inválido") ||
+        message.includes("Categoria")
+      ) {
         return res.status(400).json({ error: message });
       }
       return res.status(500).json({ error: message });

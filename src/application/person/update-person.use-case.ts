@@ -1,5 +1,7 @@
 import type { Person } from "../../domain/person/person.entity.js";
 import type { IPersonRepository } from "../../domain/person/person.repository.js";
+import type { IClientCategoryRepository } from "../../domain/client-category/client-category.repository.js";
+import type { ISupplierCategoryRepository } from "../../domain/supplier-category/supplier-category.repository.js";
 import { isRole } from "../../domain/person/role.vo.js";
 import { SYSTEM_USER_TYPE_IDS } from "../../domain/user-type/system-user-types.js";
 
@@ -7,6 +9,9 @@ export interface UpdatePersonInput {
   name: string;
   documentNumber: string;
   roles?: string[];
+  clientCategoryId?: string | null;
+  supplierCategoryId?: string | null;
+  tradeName?: string | null;
 }
 
 export interface UpdatePersonContext {
@@ -15,7 +20,11 @@ export interface UpdatePersonContext {
 }
 
 export class UpdatePersonUseCase {
-  constructor(private readonly repository: IPersonRepository) {}
+  constructor(
+    private readonly repository: IPersonRepository,
+    private readonly clientCategoryRepository?: IClientCategoryRepository,
+    private readonly supplierCategoryRepository?: ISupplierCategoryRepository,
+  ) {}
 
   async execute(
     id: string,
@@ -46,7 +55,42 @@ export class UpdatePersonUseCase {
 
     const roles = (input.roles ?? []).filter((r) => isRole(r));
 
-    const updated = existing.update(input.name, input.documentNumber, roles);
+    let clientCategoryId = input.clientCategoryId ?? existing.clientCategoryId;
+    let supplierCategoryId =
+      input.supplierCategoryId ?? existing.supplierCategoryId;
+
+    if (!roles.includes("CLIENT")) {
+      clientCategoryId = null;
+    } else if (clientCategoryId && this.clientCategoryRepository) {
+      const cat =
+        await this.clientCategoryRepository.findById(clientCategoryId);
+      if (!cat || cat.organizationId !== existing.organizationId) {
+        throw new Error(
+          "Categoria de cliente inválida ou não pertence à organização.",
+        );
+      }
+    }
+
+    if (!roles.includes("SUPPLIER")) {
+      supplierCategoryId = null;
+    } else if (supplierCategoryId && this.supplierCategoryRepository) {
+      const cat =
+        await this.supplierCategoryRepository.findById(supplierCategoryId);
+      if (!cat || cat.organizationId !== existing.organizationId) {
+        throw new Error(
+          "Categoria de fornecedor inválida ou não pertence à organização.",
+        );
+      }
+    }
+
+    const updated = existing.update(
+      input.name,
+      input.documentNumber,
+      roles,
+      clientCategoryId,
+      supplierCategoryId,
+      input.tradeName,
+    );
 
     return this.repository.update(updated);
   }

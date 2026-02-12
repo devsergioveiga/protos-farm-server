@@ -1,0 +1,4 @@
+ALTER TABLE "persons" ADD COLUMN "client_category_id" uuid;--> statement-breakpoint
+ALTER TABLE "persons" ADD COLUMN "supplier_category_id" uuid;--> statement-breakpoint
+ALTER TABLE "persons" ADD CONSTRAINT "persons_client_category_id_client_categories_id_fk" FOREIGN KEY ("client_category_id") REFERENCES "public"."client_categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "persons" ADD CONSTRAINT "persons_supplier_category_id_supplier_categories_id_fk" FOREIGN KEY ("supplier_category_id") REFERENCES "public"."supplier_categories"("id") ON DELETE set null ON UPDATE no action;
