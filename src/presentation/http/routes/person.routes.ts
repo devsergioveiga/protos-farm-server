@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Response } from "express";
 import { z } from "zod";
 import { DrizzlePersonRepository } from "../../../infrastructure/persistence/drizzle/person.repository.js";
 import { CreatePersonUseCase } from "../../../application/person/create-person.use-case.js";
@@ -6,11 +6,13 @@ import { GetPersonUseCase } from "../../../application/person/get-person.use-cas
 import { ListPersonsUseCase } from "../../../application/person/list-persons.use-case.js";
 import { UpdatePersonUseCase } from "../../../application/person/update-person.use-case.js";
 import { DeletePersonUseCase } from "../../../application/person/delete-person.use-case.js";
+import type { OrgContextRequest } from "../middleware/org-context.middleware.js";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
   personType: z.enum(["PF", "PJ"]),
   documentNumber: z.string().min(1).max(14),
+  organizationId: z.uuid({ message: "Selecione a organização" }),
   roles: z
     .array(z.enum(["USER", "CLIENT", "SUPPLIER", "EMPLOYEE"]))
     .optional()
@@ -38,6 +40,7 @@ function personToJson(person: {
   name: string;
   personType: string;
   documentNumber: string;
+  organizationId: string;
   roles: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -47,36 +50,60 @@ function personToJson(person: {
     name: person.name,
     personType: person.personType,
     documentNumber: person.documentNumber,
+    organizationId: person.organizationId,
     roles: person.roles,
     createdAt: person.createdAt.toISOString(),
     updatedAt: person.updatedAt.toISOString(),
   };
 }
 
+function getOrgContext(req: OrgContextRequest) {
+  return req.userTypeId != null
+    ? {
+        requesterUserTypeId: req.userTypeId,
+        requesterOrganizationId: req.organizationId ?? null,
+      }
+    : undefined;
+}
+
 export const personRoutes = Router();
 
-personRoutes.post("/", async (req: Request, res: Response) => {
+personRoutes.post("/", async (req: OrgContextRequest, res: Response) => {
   try {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.flatten() });
     }
-    const person = await createPerson.execute(parsed.data);
+    const person = await createPerson.execute({
+      ...parsed.data,
+      organizationId: parsed.data.organizationId,
+    });
     return res.status(201).json(personToJson(person));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao criar pessoa";
-    if (message.includes("documento") || message.includes("Tipo")) {
+    if (
+      message.includes("documento") ||
+      message.includes("Tipo") ||
+      message.includes("organização")
+    ) {
       return res.status(400).json({ error: message });
     }
     return res.status(500).json({ error: message });
   }
 });
 
-personRoutes.get("/", async (req: Request, res: Response) => {
+personRoutes.get("/", async (req: OrgContextRequest, res: Response) => {
   try {
     const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
     const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
-    const result = await listPersons.execute({ page, limit });
+    const queryOrgId = typeof req.query.organizationId === "string" ? req.query.organizationId : undefined;
+    const orgIdForFilter =
+      req.organizationId ?? queryOrgId;
+    const result = await listPersons.execute({
+      page,
+      limit,
+      organizationId: orgIdForFilter,
+    });
     return res.json({
       items: result.items.map(personToJson),
       total: result.total,
@@ -90,9 +117,9 @@ personRoutes.get("/", async (req: Request, res: Response) => {
   }
 });
 
-personRoutes.get("/:id", async (req: Request, res: Response) => {
+personRoutes.get("/:id", async (req: OrgContextRequest, res: Response) => {
   try {
-    const person = await getPerson.execute(req.params.id);
+    const person = await getPerson.execute(req.params.id, getOrgContext(req));
     if (!person) {
       return res.status(404).json({ error: "Pessoa não encontrada" });
     }
@@ -104,18 +131,22 @@ personRoutes.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-personRoutes.put("/:id", async (req: Request, res: Response) => {
+personRoutes.put("/:id", async (req: OrgContextRequest, res: Response) => {
   try {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.flatten() });
     }
-    const person = await updatePerson.execute(req.params.id, parsed.data);
+    const person = await updatePerson.execute(
+      req.params.id,
+      parsed.data,
+      getOrgContext(req),
+    );
     return res.json(personToJson(person));
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Erro ao atualizar pessoa";
-    if (message.includes("não encontrada")) {
+    if (message.includes("não encontrada") || message.includes("Acesso negado")) {
       return res.status(404).json({ error: message });
     }
     if (message.includes("documento") || message.includes("inválido")) {
@@ -125,14 +156,14 @@ personRoutes.put("/:id", async (req: Request, res: Response) => {
   }
 });
 
-personRoutes.delete("/:id", async (req: Request, res: Response) => {
+personRoutes.delete("/:id", async (req: OrgContextRequest, res: Response) => {
   try {
-    await deletePerson.execute(req.params.id);
+    await deletePerson.execute(req.params.id, getOrgContext(req));
     return res.status(204).send();
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Erro ao excluir pessoa";
-    if (message.includes("não encontrada")) {
+    if (message.includes("não encontrada") || message.includes("Acesso negado")) {
       return res.status(404).json({ error: message });
     }
     return res.status(500).json({ error: message });

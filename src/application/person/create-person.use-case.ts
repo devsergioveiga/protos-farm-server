@@ -7,6 +7,7 @@ export interface CreatePersonInput {
   name: string;
   personType: string;
   documentNumber: string;
+  organizationId: string;
   roles?: string[];
 }
 
@@ -29,6 +30,7 @@ export class CreatePersonUseCase {
       input.name,
       input.personType,
       input.documentNumber,
+      input.organizationId,
       roles,
     );
 

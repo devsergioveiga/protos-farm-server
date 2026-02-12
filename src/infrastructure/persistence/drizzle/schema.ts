@@ -39,6 +39,9 @@ export const persons = pgTable("persons", {
   name: varchar("name", { length: 255 }).notNull(),
   personType: personTypeEnum("person_type").notNull(),
   documentNumber: varchar("document_number", { length: 14 }).notNull().unique(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -64,6 +67,9 @@ export const users = pgTable("users", {
   userTypeId: uuid("user_type_id")
     .notNull()
     .references(() => userTypes.id, { onDelete: "restrict" }),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "restrict",
+  }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

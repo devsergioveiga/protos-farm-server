@@ -18,6 +18,7 @@ export class DrizzlePersonRepository implements IPersonRepository {
       name: data.name,
       personType: data.personType,
       documentNumber: data.documentNumber,
+      organizationId: data.organizationId,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
@@ -50,6 +51,7 @@ export class DrizzlePersonRepository implements IPersonRepository {
         name: row.name,
         personType: row.personType as "PF" | "PJ",
         documentNumber: row.documentNumber,
+        organizationId: row.organizationId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       },
@@ -76,6 +78,7 @@ export class DrizzlePersonRepository implements IPersonRepository {
         name: row.name,
         personType: row.personType as "PF" | "PJ",
         documentNumber: row.documentNumber,
+        organizationId: row.organizationId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       },
@@ -88,15 +91,21 @@ export class DrizzlePersonRepository implements IPersonRepository {
     const limit = Math.min(100, Math.max(1, input.limit ?? 20));
     const offset = (page - 1) * limit;
 
+    const orgFilter =
+      input.organizationId != null
+        ? eq(persons.organizationId, input.organizationId)
+        : sql`true`;
+
     const [{ count: countResult }] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(persons);
-
+      .from(persons)
+      .where(orgFilter);
     const total = Number(countResult ?? 0);
 
     const rows = await db
       .select()
       .from(persons)
+      .where(orgFilter)
       .orderBy(desc(persons.createdAt))
       .limit(limit)
       .offset(offset);
@@ -115,6 +124,7 @@ export class DrizzlePersonRepository implements IPersonRepository {
             name: row.name,
             personType: row.personType as "PF" | "PJ",
             documentNumber: row.documentNumber,
+            organizationId: row.organizationId,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
           },

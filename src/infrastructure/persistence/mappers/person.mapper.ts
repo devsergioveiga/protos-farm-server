@@ -7,6 +7,7 @@ export interface PersonRow {
   name: string;
   personType: PersonType;
   documentNumber: string;
+  organizationId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ export function toDomain(row: PersonRow, roles: Role[]): Person {
     row.name,
     row.personType,
     row.documentNumber,
+    row.organizationId,
     roles,
     row.createdAt,
     row.updatedAt,
@@ -34,6 +36,7 @@ export function toPersistence(person: Person) {
     name: person.name,
     personType: person.personType,
     documentNumber: person.documentNumber,
+    organizationId: person.organizationId,
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
   };

@@ -19,6 +19,7 @@ export class DrizzleUserRepository implements IUserRepository {
       passwordHash: data.passwordHash,
       personId: data.personId,
       userTypeId: data.userTypeId,
+      organizationId: data.organizationId,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
@@ -51,11 +52,10 @@ export class DrizzleUserRepository implements IUserRepository {
     const limit = Math.min(100, Math.max(1, input.limit ?? 20));
     const offset = (page - 1) * limit;
 
-    const [{ count: countResult }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users);
-
-    const total = Number(countResult ?? 0);
+    const orgFilter =
+      input.organizationId != null
+        ? eq(users.organizationId, input.organizationId)
+        : sql`true`;
 
     const rows = await db
       .select({
@@ -65,15 +65,23 @@ export class DrizzleUserRepository implements IUserRepository {
         personName: persons.name,
         userTypeId: users.userTypeId,
         userTypeName: userTypes.name,
+        organizationId: users.organizationId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
       .from(users)
       .innerJoin(persons, eq(users.personId, persons.id))
       .innerJoin(userTypes, eq(users.userTypeId, userTypes.id))
+      .where(orgFilter)
       .orderBy(desc(users.createdAt))
       .limit(limit)
       .offset(offset);
+
+    const [{ count: countResult }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(orgFilter);
+    const total = Number(countResult ?? 0);
 
     const items: UserListItem[] = rows.map((row) => ({
       id: row.id,
@@ -82,6 +90,7 @@ export class DrizzleUserRepository implements IUserRepository {
       personName: row.personName,
       userTypeId: row.userTypeId,
       userTypeName: row.userTypeName,
+      organizationId: row.organizationId ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));

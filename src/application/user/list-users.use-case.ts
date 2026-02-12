@@ -1,9 +1,13 @@
-import type { IUserRepository } from "../../domain/user/user.repository.js";
+import type {
+  IUserRepository,
+  ListUsersInput,
+  ListUsersResult,
+} from "../../domain/user/user.repository.js";
 
 export class ListUsersUseCase {
   constructor(private readonly repository: IUserRepository) {}
 
-  async execute(input: { page?: number; limit?: number }) {
+  async execute(input: ListUsersInput): Promise<ListUsersResult> {
     return this.repository.list(input);
   }
 }

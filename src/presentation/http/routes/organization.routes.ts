@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DrizzleOrganizationRepository } from "../../../infrastructure/persistence/drizzle/organization.repository.js";
 import { CreateOrganizationUseCase } from "../../../application/organization/create-organization.use-case.js";
 import { ListOrganizationsUseCase } from "../../../application/organization/list-organizations.use-case.js";
+import { requireSuperAdminMiddleware } from "../middleware/require-super-admin.middleware.js";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -34,31 +35,35 @@ function organizationToJson(org: {
 
 export const organizationRoutes = Router();
 
-organizationRoutes.post("/", async (req: Request, res: Response) => {
-  try {
-    const parsed = createSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.flatten() });
+organizationRoutes.post(
+  "/",
+  requireSuperAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = createSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const organization = await createOrganization.execute({
+        name: parsed.data.name,
+        slug: parsed.data.slug ?? "",
+        isActive: parsed.data.isActive,
+      });
+      return res.status(201).json(organizationToJson(organization));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao criar organização";
+      if (
+        message.includes("slug") ||
+        message.includes("Slug") ||
+        message.includes("Slug inválido")
+      ) {
+        return res.status(400).json({ error: message });
+      }
+      return res.status(500).json({ error: message });
     }
-    const organization = await createOrganization.execute({
-      name: parsed.data.name,
-      slug: parsed.data.slug ?? "",
-      isActive: parsed.data.isActive,
-    });
-    return res.status(201).json(organizationToJson(organization));
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Erro ao criar organização";
-    if (
-      message.includes("slug") ||
-      message.includes("Slug") ||
-      message.includes("Slug inválido")
-    ) {
-      return res.status(400).json({ error: message });
-    }
-    return res.status(500).json({ error: message });
-  }
-});
+  },
+);
 
 organizationRoutes.get("/", async (req: Request, res: Response) => {
   try {

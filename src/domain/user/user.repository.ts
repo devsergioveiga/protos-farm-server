@@ -5,11 +5,13 @@ export interface CreateUserInput {
   passwordHash: string;
   personId: string;
   userTypeId: string;
+  organizationId: string | null;
 }
 
 export interface ListUsersInput {
   page?: number;
   limit?: number;
+  organizationId?: string | null;
 }
 
 export interface UserListItem {
@@ -19,6 +21,7 @@ export interface UserListItem {
   personName: string;
   userTypeId: string;
   userTypeName: string;
+  organizationId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -4,6 +4,7 @@ export interface CreatePersonInput {
   name: string;
   personType: "PF" | "PJ";
   documentNumber: string;
+  organizationId: string;
   roles: ("USER" | "CLIENT" | "SUPPLIER" | "EMPLOYEE")[];
 }
 
@@ -16,6 +17,7 @@ export interface UpdatePersonInput {
 export interface ListPersonsInput {
   page?: number;
   limit?: number;
+  organizationId?: string | null;
 }
 
 export interface ListPersonsResult {

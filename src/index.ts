@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { authMiddleware } from "./presentation/http/middleware/auth.middleware.js";
+import { orgContextMiddleware } from "./presentation/http/middleware/org-context.middleware.js";
+import { authRoutes } from "./presentation/http/routes/auth.routes.js";
 import { personRoutes } from "./presentation/http/routes/person.routes.js";
 import { userRoutes } from "./presentation/http/routes/user.routes.js";
 import { organizationRoutes } from "./presentation/http/routes/organization.routes.js";
@@ -75,10 +78,11 @@ app.get("/health", async (_req: Request, res: Response) => {
   });
 });
 
-app.use("/api/persons", personRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/organizations", organizationRoutes);
-app.use("/api/user-types", userTypeRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/persons", authMiddleware, orgContextMiddleware, personRoutes);
+app.use("/api/users", authMiddleware, orgContextMiddleware, userRoutes);
+app.use("/api/organizations", authMiddleware, organizationRoutes);
+app.use("/api/user-types", authMiddleware, userTypeRoutes);
 
 runMigrations()
   .then(() => runSeed())

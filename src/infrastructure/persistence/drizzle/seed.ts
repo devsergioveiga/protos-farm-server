@@ -2,7 +2,9 @@ import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { SYSTEM_USER_TYPE_IDS } from "../../../domain/user-type/system-user-types.js";
 import { db } from "./client.js";
-import { persons, userTypes, users } from "./schema.js";
+import { organizations, persons, userTypes, users } from "./schema.js";
+
+const DEFAULT_ORG_SLUG = "organizacao-padrao";
 
 const SALT_ROUNDS = 10;
 
@@ -35,6 +37,16 @@ export async function seedUserTypes(): Promise<void> {
 }
 
 export async function seedSuperAdminUser(): Promise<void> {
+  const [defaultOrg] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.slug, DEFAULT_ORG_SLUG));
+  if (!defaultOrg) {
+    throw new Error(
+      `Default organization (${DEFAULT_ORG_SLUG}) not found. Run migrations first.`,
+    );
+  }
+
   const [existingPerson] = await db
     .select()
     .from(persons)
@@ -50,6 +62,7 @@ export async function seedSuperAdminUser(): Promise<void> {
         name: "Sergio Rubens Veiga Soares",
         personType: "PF",
         documentNumber: SUPER_ADMIN_CPF,
+        organizationId: defaultOrg.id,
       })
       .returning({ id: persons.id });
     if (!inserted) throw new Error("Failed to create super admin person");
@@ -69,6 +82,7 @@ export async function seedSuperAdminUser(): Promise<void> {
       passwordHash,
       personId,
       userTypeId: SYSTEM_USER_TYPE_IDS.SUPER_ADMIN,
+      organizationId: null,
     });
     console.log(`Seed: super admin user created (${SUPER_ADMIN_EMAIL})`);
   }

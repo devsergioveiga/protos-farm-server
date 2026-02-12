@@ -9,6 +9,7 @@ export class Person {
     public readonly name: string,
     public readonly personType: PersonType,
     public readonly documentNumber: string,
+    public readonly organizationId: string,
     public readonly roles: Role[],
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
@@ -18,11 +19,21 @@ export class Person {
     name: string,
     personType: PersonType,
     documentNumber: string,
+    organizationId: string,
     roles: Role[] = [],
   ): Person {
     const doc = Document.create(documentNumber, personType);
     const now = new Date();
-    return new Person(uuidv4(), name, personType, doc.raw, roles, now, now);
+    return new Person(
+      uuidv4(),
+      name,
+      personType,
+      doc.raw,
+      organizationId,
+      roles,
+      now,
+      now,
+    );
   }
 
   static reconstitute(
@@ -30,6 +41,7 @@ export class Person {
     name: string,
     personType: PersonType,
     documentNumber: string,
+    organizationId: string,
     roles: Role[],
     createdAt: Date,
     updatedAt: Date,
@@ -39,6 +51,7 @@ export class Person {
       name,
       personType,
       documentNumber,
+      organizationId,
       roles,
       createdAt,
       updatedAt,
@@ -52,6 +65,7 @@ export class Person {
       name,
       this.personType,
       doc.raw,
+      this.organizationId,
       roles,
       this.createdAt,
       new Date(),
