@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { DrizzleUserTypeRepository } from "../../../infrastructure/persistence/drizzle/user-type.repository.js";
+import { requirePermission } from "../middleware/require-permission.middleware.js";
 import { CreateUserTypeUseCase } from "../../../application/user-type/create-user-type.use-case.js";
 import { ListUserTypesUseCase } from "../../../application/user-type/list-user-types.use-case.js";
 import { GetUserTypeUseCase } from "../../../application/user-type/get-user-type.use-case.js";
@@ -44,7 +45,7 @@ function userTypeToJson(ut: {
 
 export const userTypeRoutes = Router();
 
-userTypeRoutes.post("/", async (req: Request, res: Response) => {
+userTypeRoutes.post("/", requirePermission("user_types", "create"), async (req: Request, res: Response) => {
   try {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -62,7 +63,7 @@ userTypeRoutes.post("/", async (req: Request, res: Response) => {
   }
 });
 
-userTypeRoutes.get("/", async (req: Request, res: Response) => {
+userTypeRoutes.get("/", requirePermission("user_types", "read"), async (req: Request, res: Response) => {
   try {
     const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
     const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
@@ -80,7 +81,7 @@ userTypeRoutes.get("/", async (req: Request, res: Response) => {
   }
 });
 
-userTypeRoutes.get("/:id", async (req: Request, res: Response) => {
+userTypeRoutes.get("/:id", requirePermission("user_types", "read"), async (req: Request, res: Response) => {
   try {
     const userType = await getUserType.execute(req.params.id);
     if (!userType) {
@@ -94,7 +95,7 @@ userTypeRoutes.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-userTypeRoutes.patch("/:id", async (req: Request, res: Response) => {
+userTypeRoutes.patch("/:id", requirePermission("user_types", "update"), async (req: Request, res: Response) => {
   try {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -113,7 +114,7 @@ userTypeRoutes.patch("/:id", async (req: Request, res: Response) => {
   }
 });
 
-userTypeRoutes.delete("/:id", async (req: Request, res: Response) => {
+userTypeRoutes.delete("/:id", requirePermission("user_types", "delete"), async (req: Request, res: Response) => {
   try {
     await deleteUserType.execute(req.params.id);
     return res.status(204).send();

@@ -6,7 +6,12 @@ import type {
 } from "../../../domain/organization/organization.repository.js";
 import { Organization } from "../../../domain/organization/organization.entity.js";
 import { db } from "./client.js";
-import { organizations } from "./schema.js";
+import {
+  organizations,
+  persons,
+  clientCategories,
+  supplierCategories,
+} from "./schema.js";
 
 export class DrizzleOrganizationRepository implements IOrganizationRepository {
   async create(organization: Organization): Promise<Organization> {
@@ -90,5 +95,46 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       page,
       limit,
     };
+  }
+
+  async update(organization: Organization): Promise<Organization> {
+    await db
+      .update(organizations)
+      .set({
+        name: organization.name,
+        slug: organization.slug,
+        isActive: organization.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(organizations.id, organization.id));
+    return organization;
+  }
+
+  async delete(id: string): Promise<void> {
+    await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  async hasRelatedData(id: string): Promise<boolean> {
+    const [personsCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(persons)
+      .where(eq(persons.organizationId, id));
+
+    const [clientCategoriesCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(clientCategories)
+      .where(eq(clientCategories.organizationId, id));
+
+    const [supplierCategoriesCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(supplierCategories)
+      .where(eq(supplierCategories.organizationId, id));
+
+    const total =
+      Number(personsCount?.count ?? 0) +
+      Number(clientCategoriesCount?.count ?? 0) +
+      Number(supplierCategoriesCount?.count ?? 0);
+
+    return total > 0;
   }
 }

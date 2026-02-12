@@ -5,12 +5,23 @@ import { db } from "./client.js";
 import { organizations, persons, userTypes, users } from "./schema.js";
 
 const DEFAULT_ORG_SLUG = "organizacao-padrao";
+const DEFAULT_ORG_NAME = "Sistema";
 
 const SALT_ROUNDS = 10;
 
 const SYSTEM_USER_TYPES = [
-  { id: SYSTEM_USER_TYPE_IDS.SUPER_ADMIN, name: "Super Admin", slug: "super_admin", isSystem: true },
-  { id: SYSTEM_USER_TYPE_IDS.ORG_ADMIN, name: "Org Admin", slug: "org_admin", isSystem: true },
+  {
+    id: SYSTEM_USER_TYPE_IDS.SUPER_ADMIN,
+    name: "Super Admin",
+    slug: "super_admin",
+    isSystem: true,
+  },
+  {
+    id: SYSTEM_USER_TYPE_IDS.ORG_ADMIN,
+    name: "Org Admin",
+    slug: "org_admin",
+    isSystem: true,
+  },
   { id: SYSTEM_USER_TYPE_IDS.USER, name: "User", slug: "user", isSystem: true },
 ] as const;
 
@@ -36,6 +47,21 @@ export async function seedUserTypes(): Promise<void> {
   }
 }
 
+export async function seedDefaultOrganization(): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.slug, DEFAULT_ORG_SLUG));
+  if (!existing) {
+    await db.insert(organizations).values({
+      name: DEFAULT_ORG_NAME,
+      slug: DEFAULT_ORG_SLUG,
+      isActive: true,
+    });
+    console.log(`Seed: default organization "${DEFAULT_ORG_SLUG}" created`);
+  }
+}
+
 export async function seedSuperAdminUser(): Promise<void> {
   const [defaultOrg] = await db
     .select()
@@ -43,7 +69,7 @@ export async function seedSuperAdminUser(): Promise<void> {
     .where(eq(organizations.slug, DEFAULT_ORG_SLUG));
   if (!defaultOrg) {
     throw new Error(
-      `Default organization (${DEFAULT_ORG_SLUG}) not found. Run migrations first.`,
+      `Default organization (${DEFAULT_ORG_SLUG}) not found. Run seedDefaultOrganization first.`,
     );
   }
 
@@ -82,7 +108,6 @@ export async function seedSuperAdminUser(): Promise<void> {
       passwordHash,
       personId,
       userTypeId: SYSTEM_USER_TYPE_IDS.SUPER_ADMIN,
-      organizationId: null,
     });
     console.log(`Seed: super admin user created (${SUPER_ADMIN_EMAIL})`);
   }

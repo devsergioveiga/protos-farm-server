@@ -3,7 +3,11 @@ import { z } from "zod";
 import { DrizzleUserRepository } from "../../../infrastructure/persistence/drizzle/user.repository.js";
 import { LoginUseCase } from "../../../application/auth/login.use-case.js";
 import { RefreshTokenUseCase } from "../../../application/auth/refresh-token.use-case.js";
-import { authMiddleware, type AuthRequest } from "../middleware/auth.middleware.js";
+import {
+  authMiddleware,
+  type AuthRequest,
+} from "../middleware/auth.middleware.js";
+import { SYSTEM_USER_TYPE_IDS } from "../../../domain/user-type/system-user-types.js";
 
 const loginSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -58,25 +62,33 @@ authRoutes.post("/refresh", async (req: Request, res: Response) => {
   }
 });
 
-authRoutes.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.userId) {
-      return res.status(401).json({ error: "Não autenticado." });
+authRoutes.get(
+  "/me",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ error: "Não autenticado." });
+      }
+      const result = await userRepository.findByIdWithOrganization(req.userId);
+      if (!result) {
+        return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+      const organizationId =
+        result.user.userTypeId === SYSTEM_USER_TYPE_IDS.SUPER_ADMIN
+          ? null
+          : result.organizationId;
+      return res.json({
+        id: result.user.id,
+        email: result.user.email,
+        personId: result.user.personId,
+        userTypeId: result.user.userTypeId,
+        organizationId,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao buscar usuário";
+      return res.status(500).json({ error: message });
     }
-    const user = await userRepository.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ error: "Usuário não encontrado." });
-    }
-    return res.json({
-      id: user.id,
-      email: user.email,
-      personId: user.personId,
-      userTypeId: user.userTypeId,
-      organizationId: user.organizationId,
-    });
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Erro ao buscar usuário";
-    return res.status(500).json({ error: message });
-  }
-});
+  },
+);

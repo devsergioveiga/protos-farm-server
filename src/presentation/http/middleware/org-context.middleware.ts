@@ -21,19 +21,19 @@ export async function orgContextMiddleware(
   }
 
   try {
-    const user = await userRepository.findById(req.userId);
-    if (!user) {
+    const result = await userRepository.findByIdWithOrganization(req.userId);
+    if (!result) {
       req.userTypeId = undefined;
       req.organizationId = undefined;
       next();
       return;
     }
 
-    req.userTypeId = user.userTypeId;
+    req.userTypeId = result.user.userTypeId;
     req.organizationId =
-      user.userTypeId === SYSTEM_USER_TYPE_IDS.SUPER_ADMIN
+      result.user.userTypeId === SYSTEM_USER_TYPE_IDS.SUPER_ADMIN
         ? null
-        : user.organizationId;
+        : result.organizationId;
 
     next();
   } catch {

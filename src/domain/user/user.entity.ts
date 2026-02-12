@@ -7,7 +7,6 @@ export class User {
     public readonly passwordHash: string,
     public readonly personId: string,
     public readonly userTypeId: string,
-    public readonly organizationId: string | null,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
@@ -17,7 +16,6 @@ export class User {
     passwordHash: string,
     personId: string,
     userTypeId: string,
-    organizationId: string | null,
   ): User {
     const now = new Date();
     return new User(
@@ -26,7 +24,6 @@ export class User {
       passwordHash,
       personId,
       userTypeId,
-      organizationId,
       now,
       now,
     );
@@ -38,7 +35,6 @@ export class User {
     passwordHash: string,
     personId: string,
     userTypeId: string,
-    organizationId: string | null,
     createdAt: Date,
     updatedAt: Date,
   ): User {
@@ -48,7 +44,6 @@ export class User {
       passwordHash,
       personId,
       userTypeId,
-      organizationId,
       createdAt,
       updatedAt,
     );

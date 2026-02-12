@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import type { IUserRepository } from "../../domain/user/user.repository.js";
-import type { User } from "../../domain/user/user.entity.js";
+import { SYSTEM_USER_TYPE_IDS } from "../../domain/user-type/system-user-types.js";
 import {
   signAccessToken,
   signRefreshToken,
@@ -27,30 +27,38 @@ export class LoginUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
   async execute(input: LoginInput): Promise<LoginOutput> {
-    const user = await this.userRepository.findByEmail(
-      input.email.toLowerCase().trim()
+    const result = await this.userRepository.findByEmailWithOrganization(
+      input.email.toLowerCase().trim(),
     );
-    if (!user) {
+    if (!result) {
       throw new Error("E-mail ou senha inválidos.");
     }
 
-    const isValid = await bcrypt.compare(input.password, user.passwordHash);
+    const isValid = await bcrypt.compare(
+      input.password,
+      result.user.passwordHash,
+    );
     if (!isValid) {
       throw new Error("E-mail ou senha inválidos.");
     }
 
-    const accessToken = signAccessToken(user.id, user.email);
-    const refreshToken = signRefreshToken(user.id, user.email);
+    const accessToken = signAccessToken(result.user.id, result.user.email);
+    const refreshToken = signRefreshToken(result.user.id, result.user.email);
+
+    const organizationId =
+      result.user.userTypeId === SYSTEM_USER_TYPE_IDS.SUPER_ADMIN
+        ? null
+        : result.organizationId;
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user.id,
-        email: user.email,
-        personId: user.personId,
-        userTypeId: user.userTypeId,
-        organizationId: user.organizationId,
+        id: result.user.id,
+        email: result.user.email,
+        personId: result.user.personId,
+        userTypeId: result.user.userTypeId,
+        organizationId,
       },
     };
   }

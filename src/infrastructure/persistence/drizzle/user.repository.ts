@@ -19,7 +19,6 @@ export class DrizzleUserRepository implements IUserRepository {
       passwordHash: data.passwordHash,
       personId: data.personId,
       userTypeId: data.userTypeId,
-      organizationId: data.organizationId,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
@@ -32,10 +31,66 @@ export class DrizzleUserRepository implements IUserRepository {
     return toDomain(row);
   }
 
+  async findByIdWithOrganization(
+    id: string,
+  ): Promise<
+    | import("../../../domain/user/user.repository.js").UserWithOrganization
+    | null
+  > {
+    const [row] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        personId: users.personId,
+        userTypeId: users.userTypeId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        organizationId: persons.organizationId,
+      })
+      .from(users)
+      .innerJoin(persons, eq(users.personId, persons.id))
+      .where(eq(users.id, id));
+    if (!row) return null;
+    const { organizationId, ...userRow } = row;
+    return {
+      user: toDomain(userRow),
+      organizationId,
+    };
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     const [row] = await db.select().from(users).where(eq(users.email, email));
     if (!row) return null;
     return toDomain(row);
+  }
+
+  async findByEmailWithOrganization(
+    email: string,
+  ): Promise<
+    | import("../../../domain/user/user.repository.js").UserWithOrganization
+    | null
+  > {
+    const [row] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        personId: users.personId,
+        userTypeId: users.userTypeId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        organizationId: persons.organizationId,
+      })
+      .from(users)
+      .innerJoin(persons, eq(users.personId, persons.id))
+      .where(eq(users.email, email));
+    if (!row) return null;
+    const { organizationId, ...userRow } = row;
+    return {
+      user: toDomain(userRow),
+      organizationId,
+    };
   }
 
   async findByPersonId(personId: string): Promise<User | null> {
@@ -54,7 +109,7 @@ export class DrizzleUserRepository implements IUserRepository {
 
     const orgFilter =
       input.organizationId != null
-        ? eq(users.organizationId, input.organizationId)
+        ? eq(persons.organizationId, input.organizationId)
         : sql`true`;
 
     const rows = await db
@@ -65,7 +120,7 @@ export class DrizzleUserRepository implements IUserRepository {
         personName: persons.name,
         userTypeId: users.userTypeId,
         userTypeName: userTypes.name,
-        organizationId: users.organizationId,
+        organizationId: persons.organizationId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -80,6 +135,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [{ count: countResult }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(users)
+      .innerJoin(persons, eq(users.personId, persons.id))
       .where(orgFilter);
     const total = Number(countResult ?? 0);
 
@@ -90,7 +146,7 @@ export class DrizzleUserRepository implements IUserRepository {
       personName: row.personName,
       userTypeId: row.userTypeId,
       userTypeName: row.userTypeName,
-      organizationId: row.organizationId ?? null,
+      organizationId: row.organizationId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));

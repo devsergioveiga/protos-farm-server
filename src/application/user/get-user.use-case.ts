@@ -10,23 +10,20 @@ export interface GetUserContext {
 export class GetUserUseCase {
   constructor(private readonly repository: IUserRepository) {}
 
-  async execute(
-    id: string,
-    context?: GetUserContext,
-  ): Promise<User | null> {
-    const user = await this.repository.findById(id);
-    if (!user) return null;
+  async execute(id: string, context?: GetUserContext): Promise<User | null> {
+    const result = await this.repository.findByIdWithOrganization(id);
+    if (!result) return null;
 
     if (context) {
       const isSuperAdmin =
         context.requesterUserTypeId === SYSTEM_USER_TYPE_IDS.SUPER_ADMIN;
       if (!isSuperAdmin && context.requesterOrganizationId != null) {
-        if (user.organizationId !== context.requesterOrganizationId) {
+        if (result.organizationId !== context.requesterOrganizationId) {
           return null;
         }
       }
     }
 
-    return user;
+    return result.user;
   }
 }
